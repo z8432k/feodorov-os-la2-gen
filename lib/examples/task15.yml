@@ -1,0 +1,46 @@
+---
+task: 15
+nosync: bcdgh
+sync: emn
+barriers: 4
+threads:
+  a:
+    start_at: 0
+    end_at: 1
+  b:
+    start_at: 1
+    end_at: 2
+  c:
+    start_at: 1
+    end_at: 2
+  d:
+    start_at: 0
+    end_at: 3
+  e:
+    start_at: 2
+    end_at: 4
+  f:
+    start_at: 2
+    end_at: 3
+  g:
+    start_at: 1
+    end_at: 2
+  h:
+    start_at: 1
+    end_at: 3
+  i:
+    start_at: 2
+    end_at: 3
+  k:
+    start_at: 2
+    end_at: 3
+  m:
+    start_at: 3
+    end_at: 4
+  n:
+    start_at: 3
+    end_at: 5
+  p:
+    start_at: 4
+    end_at: 5
+...

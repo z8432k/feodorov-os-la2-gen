@@ -1,0 +1,106 @@
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <string.h>
+
+#include <console_write.h>
+#include <common.h>
+
+#define NUMBER_OF_THREADS <%= number_of %>
+
+<% barriers_cnt.each_with_index do |v, i| %>
+  #define STEP_<%= i + 1 %>_THREADS <%= v %>
+<% end %>
+
+enum THREAD {
+    <%= ids.join(', ') %>
+};
+
+static pthread_t trds[NUMBER_OF_THREADS];
+
+static sem_t
+<%= sync.each_char.map { |s| "sem_#{s}" }.join(",\n") %>
+;
+
+static pthread_barrier_t
+<%= barriers.times.map { |b| "threads_step_#{b + 1}_done" }.join(",\n") %>
+;
+
+static pthread_barrier_t *barr[] = {
+<%= barriers.times.map { |b| "&threads_step_#{b + 1}_done" }.join(",\n") %>
+};
+
+
+static void pause_at(const unsigned short i, size_t *next_pause, const size_t last_pause, pthread_barrier_t *barriers[]) {
+    if (i == SMALL_INTERVAL * *next_pause + 1) {
+        pthread_barrier_wait(barriers[*next_pause - 1]);
+        (*next_pause)++;
+    }
+
+    if (*next_pause >= last_pause) {
+        *next_pause = 1;
+    }
+}
+
+unsigned int lab2_thread_graph_id()
+{
+    return <%= task_id %>;
+}
+
+const char* lab2_unsynchronized_threads()
+{
+    return "<%= nosync %>";
+}
+
+const char* lab2_sequential_threads()
+{
+    return "<%= sync %>";
+}
+
+<% threads.each do |k, v| %>
+  DEF_THREAD(<%= k.swapcase %>, SMALL_INTERVAL, {
+    <% if v[:start_at] > 0 %>
+    BARRIER_WAIT(step_<%= v[:start_at] %>)
+    <% end %>
+  }, {
+    <% if v[:end_at] > 0 %>
+      BARRIER_WAIT(step_<%= v[:end_at] %>)
+    <% end %>
+  }, NULL, NULL)
+
+
+  <% end %>
+
+
+int lab2_init()
+{
+    <% sync.each_char do |s| %>
+      INIT_SEM(<%= s %>, <%= s == sync[0] ? 1 : 0 %>)
+    <% end %>
+
+    <% barriers.times.each do |b| %>
+      INIT_BARRIER(step_<%= b+1 %>, STEP_<%= b+1 %>_THREADS)
+    <% end %>
+
+    <% ids.each do |id| %>
+      CREATE_THREAD(<%= id %>)
+    <% end %>
+
+    <% threads.each do |k, v| %>
+      <% if v[:end_at] > barriers %>
+        pthread_join(trds[<%= k.swapcase %>], NULL);
+      <% end %>
+    <% end %>
+
+    <% barriers.times.each do |b| %>
+      pthread_barrier_destroy(&threads_step_<%= b+1 %>_done);
+    <% end %>
+
+    <% sync.each_char do |s| %>
+      sem_destroy(&sem_<%= s %>);
+    <% end %>
+
+    console_flush();
+
+    return 0;
+}
